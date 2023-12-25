@@ -1,0 +1,19 @@
+{
+  "name": "personne",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "*",
+    "cors": "^2.8.5",
+    "ejs": "^2.4.2",
+    "express": "*",
+    "morgan": "*",
+    "neo4j-driver": "*"
+  }
+}
