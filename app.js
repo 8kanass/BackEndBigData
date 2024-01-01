@@ -94,6 +94,90 @@ app.delete('/person/:id', async (req, res) => {
   }
 });
 
+//-----------------------------------------------------------------------------------------
+
+// Create Task and Assign Persons
+app.post('/task', async (req, res) => {
+  const { name, description, personIds } = req.body;
+
+  try {
+    // Create the Task node
+    const resultTask = await session.run('CREATE (t:Task {name: $name, description: $description}) RETURN t', { name, description });
+    const task = resultTask.records[0].get('t');
+
+    // Assign Persons to the Task
+    if (personIds && personIds.length > 0) {
+      const resultAssignments = await session.run(`
+        MATCH (task:Task), (person:Person)
+        WHERE id(task) = $taskId AND id(person) IN $personIds
+        CREATE (person)-[:ASSIGNED_TO]->(task)
+      `, { taskId: task.identity.low, personIds });
+
+      // You can check the resultAssignments if needed
+    }
+
+    res.json({ task: task.properties, message: 'Task created and persons assigned successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+
+// Get all tasks with ID
+app.get('/tasks', async (req, res) => {
+  try {
+    const result = await session.run('MATCH (t:Task) RETURN id(t) as id, t');
+    const tasks = result.records.map(record => {
+      const properties = record.get('t').properties;
+      const id = convertToNumber(record.get('id'));
+      return { id, ...properties };
+    });
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Read task by ID
+app.get('/task/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const result = await session.run('MATCH (t:Task) WHERE id(t) = $id RETURN t', { id });
+    const task = result.records.map(record => record.get('t').properties)[0];
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update task by ID with new name and description
+app.put('/task/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { newName, newDescription } = req.body;
+
+  try {
+    const result = await session.run('MATCH (t:Task) WHERE id(t) = $id SET t.name = $newName, t.description = $newDescription RETURN t', { id, newName, newDescription });
+    res.json(result.records[0].get('t').properties);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete task by ID
+app.delete('/task/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    await session.run('MATCH (t:Task) WHERE id(t) = $id DETACH DELETE t', { id });
+    res.json({ message: 'Task deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(3001);
 console.log('Server started on port 3001');
 
