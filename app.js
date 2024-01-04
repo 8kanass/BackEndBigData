@@ -35,15 +35,22 @@ app.post('/person', async (req, res) => {
     }
   });
   
-// Get all persons with ID
+// Get all persons with assigned tasks
 app.get('/persons', async (req, res) => {
   try {
-    const result = await session.run('MATCH (n:Person) RETURN id(n) as id, n');
+    const result = await session.run(`
+      MATCH (person:Person)
+      OPTIONAL MATCH (person)-[:ASSIGNED_TO]->(task:Task)
+      RETURN id(person) AS id, person, COLLECT(task) AS assignedTasks
+    `);
+
     const persons = result.records.map(record => {
-      const properties = record.get('n').properties;
+      const personProperties = record.get('person').properties;
       const id = convertToNumber(record.get('id'));
-      return { id, ...properties };
+      const assignedTasks = record.get('assignedTasks').map(task => task.properties);
+      return { id, ...personProperties, assignedTasks };
     });
+
     res.json(persons);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -121,8 +128,6 @@ app.post('/task', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-
 
 
 // Get all tasks with ID
